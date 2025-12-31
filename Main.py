@@ -1,5 +1,10 @@
 from tkinter import *
 from tkinter import colorchooser
+from PIL import Image, ImageTk 
+import sys
+if sys.platform == "darwin":  
+    from tkmacosx import Button
+
 window = Tk()
 canvasHeight= 500
 canvasWidth = 400
@@ -10,6 +15,8 @@ offsetX=3
 offsetY=3
 color = "red"
 array_boxes = []
+ColorSaves = [None]*5
+ColorSaveButton = []
 def clear():
     canvas.delete("cell")
 def draw_lines():
@@ -50,8 +57,20 @@ def Click(event):
                 
         h+=size
 def changecolor(color_name):
-    global color 
+    global color, ColorSaves, ColorSaveButton
     color = color_name
+    if None not in ColorSaves and color_name is not "":
+        ColorSaves[-1]=color_name
+        ColorSaveButton[0].config(bg=color_name,text ="")
+    for i, c in reversed(list(enumerate(ColorSaves))):
+        if c is None and color_name is not "":
+            ColorSaves[i]= color_name
+            ColorSaveButton[i].config(bg=color_name,text="")
+            break
+    
+    
+
+
 def pickcolor():
     color = colorchooser.askcolor(title="Choose a color")
     if color[1]:
@@ -66,31 +85,35 @@ def Starts():
     setcolumns.destroy()
     Start.destroy()
     setsize.destroy()
-    canvas.config(width = columns*size,height = rows*size)
+    canvas.config(width = columns*size,height =rows*size,highlightthickness=0)
     window.bind("<Button-1>", Click) 
     window.bind("<B1-Motion>",Click)
-    canvas.pack(expand = True, padx = 5,pady =5)
+    
     window.update()
 
     x=0
     for _ in range(columns):
         x+=size
         array_boxes.append(x)
-  
-    img= PhotoImage(file="eraser.png")
-    img_big = img.zoom(2,2)
+    original_image = Image.open("eraser.png")
+    resized_image = original_image.resize((100, 100))
+    img = ImageTk.PhotoImage(resized_image)
+   
     clear_button = Button(window,text="clear",command =clear)
-    blue_button = Button(window,text="Blue",command= lambda:changecolor("blue"))
-    red_button = Button(window,text="Red",command= lambda:changecolor("red"))
-    erase_button = Button(window,command= lambda:changecolor(""),image=img_big,width = 100,height = 100,bg="#000000")
-    erase_button.image = img_big  
+    erase_button = Button(window,command= lambda:changecolor(""),image=img,borderwidth=0,highlightthickness=0,padx=0, pady=0,width=100,height =100)
+    erase_button.image = img
     Color_picker = Button(window,text="Pick color",command= pickcolor)
-    Color_picker.pack()
-    erase_button.place(x=900,y=170)
-    blue_button.place(x=900,y=20)
-    red_button.place(x=900,y=70)
-    clear_button.place(x=900,y = 120)
+    Color_picker.place(relx=.99,y=20, anchor='ne')
+    erase_button.place(relx=.99, y=50, anchor='ne')
+    clear_button.place(relx=.98, y=155, anchor='ne')
     
+    for x in range(5):
+        btn = Button(window, text="+", width=100)
+        btn.config(command=lambda b=btn: changecolor(b.cget("bg")))
+        btn.place(relx=0, rely=x/5, relheight=1/5)
+        ColorSaveButton.append(btn)
+
+
     draw_lines()
 
 
@@ -98,8 +121,9 @@ Start = Button(window, text="Start",command=lambda:Starts())
 Start.pack()
 
 window.geometry("1000x800")
-canvas = Canvas(window,width=canvasWidth,height = canvasHeight,bg="white")
-
+window.config(bg="#676767")
+canvas = Canvas(window,width=canvasWidth,height = canvasHeight,bg="#9F9F9F",bd= 4,relief="solid")
+canvas.pack(expand = True, padx = 5,pady =5)
 
 def only_numbers(P):
     if P == "":  # allow empty
