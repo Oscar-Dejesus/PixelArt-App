@@ -3,9 +3,9 @@ from tkinter import colorchooser
 from PIL import Image, ImageTk 
 import sys
 import os
-import objc
-from Cocoa import NSEvent, NSApplication, NSApp
+
 if sys.platform == "darwin":  
+    from Cocoa import NSEvent, NSApplication, NSApp
     from tkmacosx import Button
 if getattr(sys, "frozen", False):
     base_path = sys._MEIPASS
