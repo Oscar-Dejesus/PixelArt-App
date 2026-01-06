@@ -2,10 +2,18 @@ from tkinter import *
 from tkinter import colorchooser
 from PIL import Image, ImageTk 
 import sys
+import os
 import objc
 from Cocoa import NSEvent, NSApplication, NSApp
 if sys.platform == "darwin":  
     from tkmacosx import Button
+if getattr(sys, "frozen", False):
+    base_path = sys._MEIPASS
+else:
+    base_path = os.path.dirname(__file__)
+
+image_path = os.path.join(base_path, "eraser.png")
+
 # VARIABLES
 window = Tk()
 canvasHeight= 500
@@ -222,7 +230,7 @@ def Starts():
 # CREATES INTIAL OBJECTS 
 frame = Frame(window, bg="lightgray",width=150)
 frame.pack(side="left",fill="y")
-original_image = Image.open("eraser.png")
+original_image = Image.open(image_path)
 resized_image = original_image.resize((100, 100))
 img = ImageTk.PhotoImage(resized_image)
 clear_button = Button(frame,text="clear",command =clear)
