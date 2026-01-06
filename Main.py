@@ -2,12 +2,14 @@ from tkinter import *
 from tkinter import colorchooser
 from PIL import Image, ImageTk 
 import sys
+import objc
+from Cocoa import NSEvent, NSApplication, NSApp
 if sys.platform == "darwin":  
     from tkmacosx import Button
 # VARIABLES
 window = Tk()
 canvasHeight= 500
-canvasWidth = 400
+canvasWidth = 800
 rows=25
 columns =20
 size = 20
@@ -23,7 +25,26 @@ ColorSaveButton = []
 Draging=False
 last_mouse_x = 0
 last_mouse_y = 0
-
+def setDefaultVal():
+    global canvasHeight, canvasWidth, rows, columns, size, original_size
+    global offsetX, offsetY, color, array_boxes, original_array_boxes
+    global Scale_Factor, ColorSaves, ColorSaveButton, Draging
+    global last_mouse_x, last_mouse_y
+    canvasHeight= 500
+    canvasWidth = 800
+    rows=25
+    columns =20
+    size = 20
+    original_size=size
+    offsetX=0
+    offsetY=0
+    color = "red"
+    array_boxes = []
+    original_array_boxes = []
+    Scale_Factor=1.0
+    Draging=False
+    last_mouse_x = 0
+    last_mouse_y = 0
 # METHODS 
 def clear():
     canvas.delete("cell")
@@ -76,6 +97,7 @@ def Click(event):
     
 def onPress(event):
     start_drag(event)
+    Click(event)
 
 
 def start_drag(event):
@@ -113,32 +135,35 @@ def changecolor(color_name):
 
 def zoom_out():
     global size, array_boxes,Scale_Factor,offsetY
-    Scale_Factor *= 0.9
+    Scale = 0.97
+    Scale_Factor *= Scale
     cy = canvas.winfo_height() / 2  
     cx = canvas.winfo_width() / 2  
     for i, x in enumerate(array_boxes):
-        array_boxes[i] = cx + (array_boxes[i] - cx) * 0.9
+        array_boxes[i] = cx + (array_boxes[i] - cx) * Scale
 
         
     size = original_size * Scale_Factor
     
 
-    offsetY = offsetY * 0.9 + cy * 0.1
+    offsetY = offsetY * Scale + cy * (1- Scale)
 
 
-    canvas.scale("all", cx,cy, 0.9, 0.9)
+    canvas.scale("all", cx,cy, Scale, Scale)
 def zoom_in():
     global size, array_boxes,Scale_Factor,offsetY
-    Scale_Factor *= 1.1
+    Scale = 1.03
+    Scale_Factor *= Scale
     cx = canvas.winfo_width() / 2  
     cy = canvas.winfo_height() / 2  
     for i, x in enumerate(array_boxes):
-        array_boxes[i] = cx + (array_boxes[i] - cx) * 1.1
+        array_boxes[i] = cx + (array_boxes[i] - cx) * Scale
 
     
     size = original_size * Scale_Factor
-    offsetY = offsetY * 1.1 - cy * 0.1
-    canvas.scale("all", cx, cy, 1.1, 1.1)   
+    offsetY = offsetY * Scale + cy * (1-Scale)
+    canvas.scale("all", cx, cy, Scale, Scale)   
+
 
 
 def pickcolor():
@@ -149,20 +174,39 @@ def pickcolor():
 def SetDragging(value):
     global Draging
     Draging=value
+def DeleteAll(btn):
+
+    
+    canvas.delete("all")
+    setDefaultVal()
+    setrows.pack(pady=10)
+    setcolumns.pack(pady=10)
+    Start.pack()
+    btn.pack_forget()
+
 def Starts():
-    global size, rows, columns, original_array_boxes,original_size,Draging
+    global frame, size, rows, columns, original_array_boxes,original_size,Draging
+    quit = Button(frame, text="Quits")
+    quit.config(command=lambda: DeleteAll(quit))
+    quit.place(x=35,y=750)
     rows = int(setrows.get())
     columns = int(setcolumns.get())
-    size = int(setsize.get())
     original_size=size
-    setrows.destroy()
-    setcolumns.destroy()
-    Start.destroy()
-    setsize.destroy()
+    setrows.pack_forget()
+    setcolumns.pack_forget()
+    Start.pack_forget()
+
+    
     window.bind("<Button-1>", onPress) 
     window.bind("<B1-Motion>",Click)
     window.bind("<Meta_L>", lambda event: SetDragging(True))
     window.bind("<KeyRelease-Meta_L>", lambda event: SetDragging(False))
+
+    window.bind_all("<MouseWheel>", lambda e: zoom_in() if e.delta > 0 else zoom_out())
+    window.bind("<KeyPress-plus>", lambda event:zoom_in())
+    window.bind("<KeyPress-underscore>", lambda event: zoom_out())
+  
+
     window.update()
 
     x=0
@@ -188,18 +232,12 @@ Color_picker = Button(frame,text="Pick color",command= pickcolor)
 Color_picker.place(relx=0.5, y=20,anchor="center")
 erase_button.place(relx=0.5, y=87,anchor="center")
 clear_button.place(relx=0.5, y=155,anchor="center")
-zoom = Button(frame,text="out",command=zoom_out)
-zoom.place(x=50,y=500)
-zoom = Button(frame,text="in",command=zoom_in)
-zoom.place(x=50,y=550)
 for x in range(5):
     btn = Button(frame, text="+", width=50,height = 50)
     btn.config(command=lambda b=btn: changecolor(b.cget("bg")))
     btn.place(x=50, y=(60*x)+200)
     ColorSaveButton.append(btn)
 
-Start = Button(window, text="Start",command=lambda:Starts())
-Start.pack()
 
 window.geometry("1000x800")
 window.config(bg="#676767")
@@ -221,6 +259,7 @@ setrows = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd
 setrows.pack(pady=10)
 setcolumns = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd, "%P"))
 setcolumns.pack(pady=10)
-setsize = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd, "%P"))
-setsize.pack(pady=10)
+
+Start = Button(window, text="Start",command=lambda:Starts())
+Start.pack()
 window.mainloop()
