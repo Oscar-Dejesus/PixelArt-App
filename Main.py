@@ -207,8 +207,13 @@ def Starts():
     
     window.bind("<Button-1>", onPress) 
     window.bind("<B1-Motion>",Click)
-    window.bind("<Meta_L>", lambda event: SetDragging(True))
-    window.bind("<KeyRelease-Meta_L>", lambda event: SetDragging(False))
+    if sys.platform == "darwin":
+        window.bind("<Meta_L>", lambda e: SetDragging(True))        # Command
+        window.bind("<KeyRelease-Meta_L>", lambda e: SetDragging(False))
+    else:
+        window.bind("<Control_L>", lambda e: SetDragging(True))     # Ctrl
+        window.bind("<KeyRelease-Control_L>", lambda e: SetDragging(False))
+
 
     window.bind_all("<MouseWheel>", lambda e: zoom_in() if e.delta > 0 else zoom_out())
     window.bind("<KeyPress-plus>", lambda event:zoom_in())
@@ -241,9 +246,9 @@ Color_picker.place(relx=0.5, y=20,anchor="center")
 erase_button.place(relx=0.5, y=87,anchor="center")
 clear_button.place(relx=0.5, y=155,anchor="center")
 for x in range(5):
-    btn = Button(frame, text="+", width=50,height = 50)
+    btn = Button(frame, text="+",pady=0,padx=0)
     btn.config(command=lambda b=btn: changecolor(b.cget("bg")))
-    btn.place(x=50, y=(60*x)+200)
+    btn.place(x=50, y=(60*x)+200,width=50,height = 50)
     ColorSaveButton.append(btn)
 
 
