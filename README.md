@@ -1,6 +1,6 @@
 This is an app I did for fun.  
 I had this idea for a while and decided to use Python Tkinter to help implement it.  
-A drawing you can export your drawing as a PNG and it will appear on the Desktop.  
+exported drawings will appear on desktop as art.png rename it so it doesnt get overwritten on next export
 
 If you’re on Mac, you must go in Settings → Gatekeeper and press “Open Anyway” for the PixelDraw app.  
 
