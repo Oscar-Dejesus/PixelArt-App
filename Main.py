@@ -1,9 +1,9 @@
 from tkinter import *
 from tkinter import colorchooser
-from PIL import Image, ImageTk 
+from PIL import Image, ImageTk, ImageDraw
 import sys
 import os
-
+import math
 if sys.platform == "darwin":  
     from Cocoa import NSEvent, NSApplication, NSApp
     from tkmacosx import Button
@@ -28,8 +28,6 @@ color = "red"
 array_boxes = []
 original_array_boxes = []
 Scale_Factor=1.0
-ColorSaves = [None]*5
-ColorSaveButton = []
 Draging=False
 last_mouse_x = 0
 last_mouse_y = 0
@@ -37,7 +35,7 @@ Brush_Size="Small"
 def setDefaultVal():
     global canvasHeight, canvasWidth, rows, columns, size, original_size
     global offsetX, offsetY, color, array_boxes, original_array_boxes
-    global Scale_Factor, ColorSaves, ColorSaveButton, Draging
+    global Scale_Factor, Draging
     global last_mouse_x, last_mouse_y
     canvasHeight= 500
     canvasWidth = 800
@@ -55,6 +53,48 @@ def setDefaultVal():
     last_mouse_x = 0
     last_mouse_y = 0
 # METHODS 
+def export():
+    global canvas, array_boxes, offsetY, size, rows, Scale_Factor
+    while Scale_Factor<1:
+        zoom_in()
+    canvas.update_idletasks()
+
+    if not array_boxes:
+        print("No drawing to export")
+        return
+
+
+    x_min = array_boxes[0] - size
+    x_max = array_boxes[-1]
+
+
+    y_min = offsetY
+    y_max = offsetY + rows * size
+
+    width = int(x_max - x_min)
+    height = int(y_max - y_min)
+
+
+    img = Image.new("RGB", (width, height), (125, 125, 125)) 
+    draw = ImageDraw.Draw(img)
+
+    for item in canvas.find_withtag("cell"):
+        coords = canvas.coords(item)  
+        fill = canvas.itemcget(item, "fill")
+
+        x1 = coords[0] - x_min
+        y1 = coords[1] - y_min
+        x2 = coords[2] - x_min
+        y2 = coords[3] - y_min
+        draw.rectangle([x1, y1, x2, y2], fill=fill)
+
+
+    desktop = os.path.join(os.path.expanduser("~"), "Desktop")
+    path = os.path.join(desktop, "art.png")
+    img.save(path)
+    print(f"Drawing exported to Desktop as art.png")
+
+
 def clear():
     canvas.delete("cell")
 def draw_lines():
@@ -75,12 +115,43 @@ def draw_lines():
     canvas.create_line(left+size,0, left+size,h,width=1,fill="black",tag='lines')
 
 # MOUSE/CONTROLS METHODS
-def Brush_Draw(left,h,w):
-    global Brush_Size,offsetX, array_boxes,offsetY,rows,size
+def Brush_Draw(x,y,left,h,w):
+    global Brush_Size,offsetX, array_boxes,offsetY,rows,size,color
     max_height=rows*size + offsetY
+
+    if Brush_Size=="fill":
+        stack=[(left,h)]
+        Fill_Only_Color=""
+        items= canvas.find_overlapping(x,y,x+size,y+size)
+        for item in items:
+            if "cell" in canvas.gettags(item):
+                Fill_Only_Color = canvas.itemcget(item, "fill")
+                break
+        while stack:
+
+            x1, y1= stack.pop()
+            canvas.create_rectangle(x1,y1 ,x1+size,y1+size ,fill=color,outline="",tags = "cell")
+            neighbors = [
+                    (x1- size, y1),       
+                    (x1 +size, y1),       
+                    (x1, y1 - size),       
+                    (x1, y1 + size)        
+                ]
+            
+            for x,y in neighbors:
+
+                if x >= math.floor(array_boxes[0])-size and x+math.floor(size) <= array_boxes[-1] and y >= math.floor(offsetY) and y+math.floor(size) <= max_height:
+                    items= canvas.find_overlapping(x+size/2,y+size/2,x+size/2,y+size/2)
+                    
+                    if not any("cell" in canvas.gettags(item) for item in items):
+                        stack.append((x,y))
+                
+
+                    
+    
     if Brush_Size=="Small":
         canvas.create_rectangle(left,h ,w+offsetX,h+size,fill=color,outline="",tags = "cell")
-    elif Brush_Size=="Meduim":
+    elif Brush_Size=="Medium":
         canvas.create_rectangle(left,h ,w+offsetX,h+size,fill=color,outline="",tags = "cell")
         if left-(w-left)>=array_boxes[0]-size:
             canvas.create_rectangle(left-(w-left),h ,left+offsetX,h+size,fill=color,outline="",tags = "cell")
@@ -89,7 +160,7 @@ def Brush_Draw(left,h,w):
                     
         if (h-size)>=offsetY and left-(w-left)>=array_boxes[0]-size:
             canvas.create_rectangle(left-(w-left),h-(size),left+offsetX,h,fill=color,outline="",tags = "cell")
-    else:
+    elif Brush_Size=="Large":
         
         canvas.create_rectangle(left,h ,w+offsetX,h+size,fill=color,outline="",tags = "cell")
         if left-(w-left)>=array_boxes[0]-size:
@@ -118,11 +189,12 @@ def Brush_Draw(left,h,w):
 def Change_Brush_Size(size):
     global Brush_Size
     Brush_Size=size
-def Click(event): 
+def Click(event):
+
     if Draging:
         drag(event) 
         return
-    global color
+    global color,Brush_Size
     x = event.x_root - canvas.winfo_rootx()
     y = event.y_root - canvas.winfo_rooty() 
     if x<0 or y<0 or x> canvas.winfo_width() or y> canvas.winfo_height():
@@ -136,14 +208,33 @@ def Click(event):
             
             if x>left-1 and x<w+1 and y>h-1 and y<h+size:
                 if color =="":
-                    items= canvas.find_overlapping(x,y,x,y)
-                    for item in items:
-                        if "cell" in canvas.gettags(item):
-                            canvas.delete(item)
-                            
+                    if Brush_Size=="Small":
+                        items= canvas.find_overlapping(x,y,x,y)
+                        for item in items:
+                            if "cell" in canvas.gettags(item):
+                                canvas.delete(item)
+                        
+                    elif Brush_Size=="Medium":
+                        items= canvas.find_overlapping(x,y,x,y)
+                        if items and "cell" in canvas.gettags(items[0]):
+                            first_item = items[0]
+                            x1,y1,x2,y2 = canvas.coords(first_item)
+                            items= canvas.find_overlapping(x1-size,y1-size,x2,y2)
+                        for item in items:
+                            if "cell" in canvas.gettags(item):
+                                canvas.delete(item)
+                    else:
+                        items= canvas.find_overlapping(x,y,x,y)
+                        if items and "cell" in canvas.gettags(items[0]):
+                            first_item = items[0]
+                            x1,y1,x2,y2 = canvas.coords(first_item)
+                            items= canvas.find_overlapping(x1-size,y1-size,x2+size,y2+size)
+                        for item in items:
+                            if "cell" in canvas.gettags(item):
+                                canvas.delete(item)
                 else:
                     
-                    Brush_Draw(left,h,w)
+                    Brush_Draw(x,y,left,h,w)
                     
                    
                     canvas.tag_raise('lines')
@@ -178,16 +269,8 @@ def drag(event):
 
 #BUTTON METHODS 
 def changecolor(color_name):
-    global color, ColorSaves, ColorSaveButton
+    global color
     color = color_name
-    if None not in ColorSaves and color_name is not "":
-        ColorSaves[-1]=color_name
-        ColorSaveButton[0].config(bg=color_name,text ="")
-    for i, c in reversed(list(enumerate(ColorSaves))):
-        if c is None and color_name is not "":
-            ColorSaves[i]= color_name
-            ColorSaveButton[i].config(bg=color_name,text="")
-            break
 
 def zoom_out():
     global size, array_boxes,Scale_Factor,offsetY
@@ -234,13 +317,13 @@ def StartOver(btn):
     setrows.pack(pady=10)
     setcolumns.pack(pady=10)
     Start.pack()
-    btn.pack_forget()
+    btn.place_forget()
 
 def Starts():
     global frame, size, rows, columns, original_array_boxes,original_size,Draging
     quit = Button(frame, text="Quits")
     quit.config(command=lambda: StartOver(quit))
-    quit.place(x=35,y=750)
+    quit.place(x=40,y=730)
     rows = int(setrows.get())
     columns = int(setcolumns.get())
     original_size=size
@@ -277,37 +360,50 @@ def Starts():
 
 
 # CREATES INTIAL OBJECTS Buttons,Text ect
-frame = Frame(window, bg="#454545",width=150)
+frame = Frame(window, bg="#03045E",width=150)
 frame.pack(side="left",fill="y")
 original_image = Image.open(image_path)
 resized_image = original_image.resize((100, 100))
 img = ImageTk.PhotoImage(resized_image)
+
+# Define a global color variable for all buttons
+BUTTON_COLOR = "#90E0EF"
+
 for x in range(5):
-    btn = Button(frame, text="+",pady=0,padx=0)
-    btn.config(command=lambda b=btn: changecolor(b.cget("bg")))
-    btn.place(x=50, y=(60*x)+200,width=50,height = 50)
-    ColorSaveButton.append(btn)
-clear_button = Button(frame,text="clear",command =clear)
-erase_button = Button(frame,command= lambda:changecolor(""),image=img,borderwidth=0,highlightthickness=0,padx=0, pady=0,width=100,height =100)
-Color_picker = Button(frame,text="Pick color",command= pickcolor)
-Brush_Small= Button(frame,text="Small",command= lambda: Change_Brush_Size("Small"))
-Brush_Meduim= Button(frame,text="Meduim",command= lambda: Change_Brush_Size("Meduim"))
-Brush_Large= Button(frame,text="Large",command= lambda: Change_Brush_Size("Large"))
+
+    btn = Button(frame, text="", pady=0, padx=0, bg=BUTTON_COLOR)
+
+    btn.config(command=lambda b=btn: (changecolor(b.cget("bg"))))
+    save = Button(frame, text="save", pady=0, padx=0, bg=BUTTON_COLOR, command=lambda b=btn: b.config(bg=color, activebackground=color, text=""))
+    btn.place(x=50, y=(60*x)+200, width=50, height=50)
+    save.place(x=5, y=(60*x)+215, width=40, height=20)
+
+clear_button = Button(frame, text="clear", bg=BUTTON_COLOR, command=clear)
+erase_button = Button(frame, command=lambda: changecolor(""), image=img, bg=BUTTON_COLOR, borderwidth=0, highlightthickness=0, padx=0, pady=0, width=100, height=100)
+Color_picker = Button(frame, text="Pick color", bg=BUTTON_COLOR, command=pickcolor)
+Brush_Small = Button(frame, text="Small", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("Small"))
+Brush_Medium = Button(frame, text="Medium", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("Medium"))
+Brush_Large = Button(frame, text="Large", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("Large"))
+Brush_fill = Button(frame, text="fill", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("fill"))
+Export_button=Button(frame, text="Export", bg=BUTTON_COLOR, command=lambda: export())
 erase_button.image = img
 
 Brush_Small.place(relx=0.5, y=600,anchor="center")
-Brush_Meduim.place(relx=0.5, y=650,anchor="center")
+Brush_Medium.place(relx=0.5, y=650,anchor="center")
 Brush_Large.place(relx=0.5, y=700,anchor="center")
+Brush_fill.place(relx=0.5, y=550,anchor="center")
 Color_picker.place(relx=0.5, y=20,anchor="center")
 erase_button.place(relx=0.5, y=87,anchor="center")
 clear_button.place(relx=0.5, y=155,anchor="center")
-
+Export_button.place(relx=0.5, y=785,anchor="center")
 
 
 
 window.geometry("1000x800")
-window.config(bg="#2E2E2E")
-canvas = Canvas(window,bg="#9F9F9F",bd= 4,relief="solid")
+window.config(bg="#0077B6")
+canvas = Canvas(window,bg="#7D7D7D",bd=0,
+    highlightthickness=4,
+    highlightbackground="#CAF0F8")
 canvas.pack(expand = True, padx = 5,pady =5,fill="both")
 
 def only_numbers(P):
@@ -321,9 +417,9 @@ def only_numbers(P):
 
 vcmd = window.register(only_numbers)
 
-setrows = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd, "%P"))
+setrows = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd, "%P"), background="#00B4D8")
 setrows.pack(pady=10)
-setcolumns = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd, "%P"))
+setcolumns = Spinbox(window, from_=0, to=100, validate="key", validatecommand=(vcmd, "%P"),background="#00B4D8")
 setcolumns.pack(pady=10)
 
 Start = Button(window, text="Start",command=lambda:Starts())

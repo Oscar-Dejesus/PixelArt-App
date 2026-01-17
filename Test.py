@@ -1,279 +1,59 @@
 from tkinter import *
 from tkinter import colorchooser
-from PIL import Image, ImageTk 
-import sys
-import os
 
-# --- MAC BUTTON SUPPORT ---
-if sys.platform == "darwin":  
-    from Cocoa import NSEvent, NSApplication, NSApp
-    from tkmacosx import Button
+# ----------------------
+# Pixel Art App - Visual Mockup
+# ----------------------
 
-# --- PYINSTALLER IMAGE PATH ---
-if getattr(sys, "frozen", False):
-    base_path = sys._MEIPASS
-else:
-    base_path = os.path.dirname(__file__)
+CELL_SIZE = 20
+ROWS = 20
+COLS = 20
 
-image_path = os.path.join(base_path, "eraser.png")
-
-# ==========================
-# VARIABLES
-# ==========================
 window = Tk()
-canvasHeight = 500
-canvasWidth = 800
-rows = 25
-columns = 20
-size = 20
-original_size = size
-offsetX = 0
-offsetY = 0
-color = "red"
-array_boxes = []
-original_array_boxes = []
-Scale_Factor = 1.0
-ColorSaves = [None] * 5
-ColorSaveButton = []
-Draging = False
-last_mouse_x = 0
-last_mouse_y = 0
+window.title("Pixel Art App")
+window.geometry("900x600")
+window.configure(bg="#2E2E2E")
 
-# ==========================
-# RESET
-# ==========================
-def setDefaultVal():
-    global canvasHeight, canvasWidth, rows, columns, size, original_size
-    global offsetX, offsetY, color, array_boxes, original_array_boxes
-    global Scale_Factor, Draging, last_mouse_x, last_mouse_y
+# ----------------------
+# Sidebar (Tools Panel)
+# ----------------------
+sidebar = Frame(window, width=200, bg="#1F1F1F", relief='raised', bd=2)
+sidebar.pack(side=LEFT, fill=Y)
 
-    canvasHeight = 500
-    canvasWidth = 800
-    rows = 25
-    columns = 20
-    size = 20
-    original_size = size
-    offsetX = 0
-    offsetY = 0
-    color = "red"
-    array_boxes = []
-    original_array_boxes = []
-    Scale_Factor = 1.0
-    Draging = False
-    last_mouse_x = 0
-    last_mouse_y = 0
+Label(sidebar, text="Pixel Tools", bg="#1F1F1F", fg="white",
+      font=("Segoe UI", 14, "bold"), pady=20).pack()
 
-# ==========================
-# CANVAS METHODS
-# ==========================
-def clear():
-    canvas.delete("cell")
+# Color preview box
+color_preview = Frame(sidebar, bg="#ff3b3b", width=100, height=40, relief='sunken', bd=2)
+color_preview.pack(pady=10)
 
-def draw_lines():
-    h = offsetY
-    for _ in range(rows):
-        for w in array_boxes:
-            left = w - size + offsetX
-            canvas.create_line(left, h, left + size, h, width=1, fill="black", tag="lines")
-            canvas.create_line(left, h, left, h + size, width=1, fill="black", tag="lines")
-        h += size
+# Buttons mockup
+btn_frame = Frame(sidebar, bg="#1F1F1F")
+btn_frame.pack(pady=20)
 
-# ==========================
-# MOUSE / DRAWING
-# ==========================
-def Click(event):
-    if Draging:
-        drag(event)
-        return
+Button(btn_frame, text="Pick Color", width=15, bg="#3A3A3A", fg="white", relief='flat').pack(pady=5)
+Button(btn_frame, text="Clear Canvas", width=15, bg="#AA3333", fg="white", relief='flat').pack(pady=5)
+Button(btn_frame, text="Small Brush", width=15, bg="#3A3A3A", fg="white", relief='flat').pack(pady=5)
+Button(btn_frame, text="Medium Brush", width=15, bg="#3A3A3A", fg="white", relief='flat').pack(pady=5)
+Button(btn_frame, text="Large Brush", width=15, bg="#3A3A3A", fg="white", relief='flat').pack(pady=5)
+Button(btn_frame, text="Fill Tool", width=15, bg="#3A3A3A", fg="white", relief='flat').pack(pady=5)
 
-    x = event.x_root - canvas.winfo_rootx()
-    y = event.y_root - canvas.winfo_rooty()
+# ----------------------
+# Canvas area (visual only)
+# ----------------------
+canvas_frame = Frame(window, bg="#B0B0B0", relief='sunken', bd=2)
+canvas_frame.pack(side=RIGHT, expand=True, fill=BOTH, padx=10, pady=10)
 
-    if x < 0 or y < 0 or x > canvas.winfo_width() or y > canvas.winfo_height():
-        return
+canvas = Canvas(canvas_frame, bg="#E0E0E0", highlightthickness=0)
+canvas.pack(expand=True, fill=BOTH)
 
-    h = offsetY
-    for _ in range(rows):
-        for w in array_boxes:
-            left = w - size + offsetX
-            if left <= x <= w and h <= y <= h + size:
-                if color == "":
-                    items = canvas.find_overlapping(x, y, x, y)
-                    for item in items:
-                        if "cell" in canvas.gettags(item):
-                            canvas.delete(item)
-                else:
-                    canvas.create_rectangle(
-                        left, h, w + offsetX, h + size,
-                        fill=color, outline="", tags="cell"
-                    )
-                    canvas.tag_raise("lines")
-        h += size
-
-def onPress(event):
-    start_drag(event)
-    Click(event)
-
-def start_drag(event):
-    global last_mouse_x, last_mouse_y
-    last_mouse_x = event.x_root
-    last_mouse_y = event.y_root
-
-def drag(event):
-    global last_mouse_x, last_mouse_y, array_boxes, offsetY
-
-    dx = event.x_root - last_mouse_x
-    dy = event.y_root - last_mouse_y
-
-    for i in range(len(array_boxes)):
-        array_boxes[i] += dx
-
-    offsetY += dy
-    canvas.move("all", dx, dy)
-
-    last_mouse_x = event.x_root
-    last_mouse_y = event.y_root
-
-# ==========================
-# COLOR
-# ==========================
-def changecolor(color_name):
-    global color
-    color = color_name
-
-def pickcolor():
-    c = colorchooser.askcolor(title="Choose a color")
-    if c[1]:
-        changecolor(c[1])
-
-def SetDragging(value):
-    global Draging
-    Draging = value
-
-# ==========================
-# START / RESET
-# ==========================
-def StartOver(btn):
-    canvas.delete("all")
-    setDefaultVal()
-    setrows.pack(pady=10)
-    setcolumns.pack(pady=10)
-    Start.pack()
-    btn.pack_forget()
-
-def Starts():
-    global rows, columns, original_size
-
-    quit_btn = Button(frame, text="Quit")
-    quit_btn.config(command=lambda: StartOver(quit_btn))
-    quit_btn.place(x=35, y=750)
-
-    rows = int(setrows.get())
-    columns = int(setcolumns.get())
-    original_size = size
-
-    setrows.pack_forget()
-    setcolumns.pack_forget()
-    Start.pack_forget()
-
-    window.bind("<Button-1>", onPress)
-    window.bind("<B1-Motion>", Click)
-
-    if sys.platform == "darwin":
-        window.bind("<Meta_L>", lambda e: SetDragging(True))
-        window.bind("<KeyRelease-Meta_L>", lambda e: SetDragging(False))
-    else:
-        window.bind("<Control_L>", lambda e: SetDragging(True))
-        window.bind("<KeyRelease-Control_L>", lambda e: SetDragging(False))
-
-    x = 0
-    for _ in range(columns):
-        x += size
-        array_boxes.append(x)
-
-    draw_lines()
-
-# ==========================
-# UI FRAME
-# ==========================
-frame = Frame(window, bg="#454545", width=150)
-frame.pack(side="left", fill="y")
-
-# --- ERASER IMAGE ---
-original_image = Image.open(image_path)
-resized_image = original_image.resize((100, 100))
-img = ImageTk.PhotoImage(resized_image)
-
-# --- COLOR SAVE BUTTONS ---
-for i in range(5):
-    btn = Button(frame, text="+", bg="#6A6A6A", fg="white")
-    btn.place(x=50, y=(60 * i) + 200, width=50, height=50)
-    ColorSaveButton.append(btn)
-
-# --- MAIN BUTTONS ---
-Color_picker = Button(frame, text="Pick color", command=pickcolor)
-Color_picker.place(relx=0.5, y=20, anchor="center")
-
-erase_button = Button(
-    frame,
-    image=img,
-    command=lambda: changecolor(""),
-    borderwidth=0
-)
-erase_button.image = img
-erase_button.place(relx=0.5, y=87, anchor="center")
-
-clear_button = Button(frame, text="Clear", command=clear)
-clear_button.place(relx=0.5, y=155, anchor="center")
-
-# ==========================
-# BRUSH SIZE UI (NO LOGIC)
-# ==========================
-Label(
-    frame,
-    text="Brush Size",
-    bg="#454545",
-    fg="white",
-    font=("Helvetica", 11, "bold")
-).place(relx=0.5, y=350, anchor="center")
-
-btn_style = {
-    "bg": "#6A6A6A",
-    "fg": "white",
-    "activebackground": "#8A8A8A",
-    "bd": 0,
-    "font": ("Helvetica", 10, "bold"),
-    "cursor": "hand2"
-}
-
-Button(frame, text="Small", **btn_style).place(relx=0.5, y=385, anchor="center", width=90, height=32)
-Button(frame, text="Medium", **btn_style).place(relx=0.5, y=425, anchor="center", width=90, height=32)
-Button(frame, text="Large", **btn_style).place(relx=0.5, y=465, anchor="center", width=90, height=32)
-
-# ==========================
-# CANVAS
-# ==========================
-window.geometry("1000x800")
-window.config(bg="#2E2E2E")
-
-canvas = Canvas(window, bg="#9F9F9F", bd=4, relief="solid")
-canvas.pack(expand=True, padx=5, pady=5, fill="both")
-
-# ==========================
-# INPUTS
-# ==========================
-def only_numbers(P):
-    return P.isdigit() or P == ""
-
-vcmd = window.register(only_numbers)
-
-setrows = Spinbox(window, from_=1, to=100, validate="key", validatecommand=(vcmd, "%P"))
-setrows.pack(pady=10)
-
-setcolumns = Spinbox(window, from_=1, to=100, validate="key", validatecommand=(vcmd, "%P"))
-setcolumns.pack(pady=10)
-
-Start = Button(window, text="Start", command=Starts)
-Start.pack()
+# Draw mockup grid for visual effect
+for r in range(ROWS):
+    for c in range(COLS):
+        x1 = c * CELL_SIZE
+        y1 = r * CELL_SIZE
+        x2 = x1 + CELL_SIZE
+        y2 = y1 + CELL_SIZE
+        canvas.create_rectangle(x1, y1, x2, y2, fill="white", outline="#888")
 
 window.mainloop()
