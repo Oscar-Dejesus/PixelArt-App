@@ -7,6 +7,8 @@ import math
 if sys.platform == "darwin":
     from Cocoa import NSEvent, NSApplication, NSApp
     from tkmacosx import Button
+else:
+    Button=Button
 def resource_path(relative_path):
     if getattr(sys, "frozen", False):
         base_path = sys._MEIPASS
@@ -14,7 +16,8 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
 
-image_path = resource_path(os.path.join("assets", "eraser.png"))
+# Image in root, not in a folder
+image_path = resource_path("eraser.png")
 
 
 # VARIABLES
@@ -381,7 +384,7 @@ def Starts():
     global frame, size, rows, columns, original_array_boxes,original_size,Draging
     quit = Button(frame, text="Quits")
     quit.config(command=lambda: StartOver(quit))
-    quit.place(x=115,y=730)
+    quit.place(relx=0.5, y=730, anchor="center")
     rows = int(setrows.get())
     columns = int(setcolumns.get())
     original_size=size
@@ -465,9 +468,12 @@ Color_picker.place(relx=0.5, y=30, anchor="center")  # moved up
 
 # Brush buttons
 Brush_fill.place(relx=0.5, y=580, anchor="center")
-Brush_Small.place(relx=0.2, y=660, anchor="center")
-Brush_Medium.place(relx=0.5, y=660, anchor="center")
-Brush_Large.place(relx=0.8, y=660, anchor="center")
+frame.update_idletasks()  # make sure frame width is correct
+frame_width = frame.winfo_width()
+Brush_Small.place(x=frame_width*1//6, y=660, anchor="center")
+Brush_Medium.place(x=frame_width*3//6, y=660, anchor="center")
+Brush_Large.place(x=frame_width*5//6, y=660, anchor="center")
+
 
 # Export button
 Export_button.config(bg="#118AB2", fg="white", font=("Arial", 12, "bold"))
