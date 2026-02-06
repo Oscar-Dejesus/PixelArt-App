@@ -26,12 +26,14 @@ offsetX=0
 offsetY=0
 color = "red"
 array_boxes = []
+
 original_array_boxes = []
 Scale_Factor=1.0
 Draging=False
 last_mouse_x = 0
 last_mouse_y = 0
 Brush_Size="Small"
+
 def setDefaultVal():
     global canvasHeight, canvasWidth, rows, columns, size, original_size
     global offsetX, offsetY, color, array_boxes, original_array_boxes
@@ -120,32 +122,71 @@ def Brush_Draw(x,y,left,h,w):
     max_height=rows*size + offsetY
 
     if Brush_Size=="fill":
-        stack=[(left,h)]
-        Fill_Only_Color=""
-        items= canvas.find_overlapping(x,y,x+size,y+size)
-        for item in items:
-            if "cell" in canvas.gettags(item):
-                Fill_Only_Color = canvas.itemcget(item, "fill")
-                break
+        stack = [(left, h)]
+        Filled = set()
+        Filled.add((left, h))
+        all_cells = canvas.find_withtag("cell")
+        Fill_Color =None
+        Initial_area= canvas.find_overlapping(x, y, x, y)
+        # Create an empty set to store positions
+        cell_coords_set = {}
+
+        # Loop through each item and add its (x, y) position to the set
+        for item in all_cells:
+            coords = canvas.coords(item)      # returns [x1, y1, x2, y2]
+            x = math.floor(coords[0])
+            y = math.floor(coords[1])
+            cell_coords_set[(x, y)] = item
+        
+
+        for item in Initial_area:
+            tags = canvas.gettags(item)
+            if "cell" in tags:
+                Fill_Color = canvas.itemcget(item, "fill")
+        
         while stack:
+            x1, y1 = stack.pop()
+            item = None
+            floor_x1 = math.floor(x1)
+            floor_y1 = math.floor(y1)
 
-            x1, y1= stack.pop()
-            canvas.create_rectangle(x1,y1 ,x1+size,y1+size ,fill=color,outline="",tags = "cell")
-            neighbors = [
-                    (x1- size, y1),       
-                    (x1 +size, y1),       
-                    (x1, y1 - size),       
-                    (x1, y1 + size)        
-                ]
-            
-            for x,y in neighbors:
-
-                if x >= math.floor(array_boxes[0])-size and x+math.floor(size) <= array_boxes[-1] and y >= math.floor(offsetY) and y+math.floor(size) <= max_height:
-                    items= canvas.find_overlapping(x+size/2,y+size/2,x+size/2,y+size/2)
-                    
-                    if not any("cell" in canvas.gettags(item) for item in items):
-                        stack.append((x,y))
+            # Check the current cell color before drawing
+            if Fill_Color is not None:
+                if (floor_x1,floor_y1) in cell_coords_set:
+                    item = cell_coords_set.get((floor_x1,floor_y1))
+                    if canvas.itemcget(item, "fill")!= Fill_Color:
+                        continue
+                else:
+                    continue
                 
+            else:
+                if (floor_x1,floor_y1) in cell_coords_set:
+                    item = cell_coords_set.get((floor_x1,floor_y1))
+                    continue
+
+            # Draw rectangle
+            if item is not None:
+                canvas.itemconfig(item, fill= color)
+            else:
+                canvas.create_rectangle(x1, y1, x1 + size, y1 + size,
+                                        fill=color, outline="", tags="cell")
+
+            # Add neighbors
+            neighbors = [(x1 - size, y1), (x1 + size, y1),
+                        (x1, y1 - size), (x1, y1 + size)]
+            for nx, ny in neighbors:
+                if (nx, ny) in Filled:
+                    continue
+                if math.floor(nx) < math.floor(array_boxes[0]-size) or math.floor(nx + size) >math.floor(array_boxes[-1]):
+                    continue
+                if math.floor(ny) < math.floor(offsetY) or math.floor(ny + size -1) >=math.floor(max_height):
+                    continue
+                stack.append((nx, ny))
+                
+                Filled.add((nx, ny))
+
+           
+                        
 
                     
     
@@ -323,7 +364,7 @@ def Starts():
     global frame, size, rows, columns, original_array_boxes,original_size,Draging
     quit = Button(frame, text="Quits")
     quit.config(command=lambda: StartOver(quit))
-    quit.place(x=40,y=730)
+    quit.place(x=115,y=730)
     rows = int(setrows.get())
     columns = int(setcolumns.get())
     original_size=size
@@ -360,27 +401,28 @@ def Starts():
 
 
 # CREATES INTIAL OBJECTS Buttons,Text ect
-frame = Frame(window, bg="#03045E",width=150)
-frame.pack(side="left",fill="y")
+
 original_image = Image.open(image_path)
 resized_image = original_image.resize((100, 100))
 img = ImageTk.PhotoImage(resized_image)
 
-# Define a global color variable for all buttons
-BUTTON_COLOR = "#90E0EF"
+BUTTON_COLOR = "#48CAE4"
+FRAME_BG = "#03045E"
+frame = Frame(window, bg=FRAME_BG, width=300, height=900)  # wider and taller
+frame.pack(side="left", fill="y")  # keep filling vertically
 
+# Color swatches
 for x in range(5):
-
-    btn = Button(frame, text="", pady=0, padx=0, bg=BUTTON_COLOR)
-
+    btn = Button(frame, text="", pady=0, padx=0, bg=BUTTON_COLOR, borderwidth=2, relief="raised")
     btn.config(command=lambda b=btn: (changecolor(b.cget("bg"))))
-    save = Button(frame, text="save", pady=0, padx=0, bg=BUTTON_COLOR, command=lambda b=btn: b.config(bg=color, activebackground=color, text=""))
-    btn.place(x=50, y=(60*x)+200, width=50, height=50)
-    save.place(x=5, y=(60*x)+215, width=40, height=20)
+    save = Button(frame, text="save", pady=0, padx=0, bg=BUTTON_COLOR,
+                  command=lambda b=btn: b.config(bg=color, activebackground=color, text=""))
+    btn.place(x=110, y=(75*x)+180, width=70, height=70)       # moved up
+    save.place(x=60, y=(75*x)+200, width=45, height=25)      # moved up
 
 clear_button = Button(frame, text="clear", bg=BUTTON_COLOR, command=clear)
 erase_button = Button(frame, command=lambda: changecolor(""), image=img, bg=BUTTON_COLOR, borderwidth=0, highlightthickness=0, padx=0, pady=0, width=100, height=100)
-Color_picker = Button(frame, text="Pick color", bg=BUTTON_COLOR, command=pickcolor)
+Color_picker = Button(frame, text="Pick color", bg=BUTTON_COLOR, command=lambda:pickcolor())
 Brush_Small = Button(frame, text="Small", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("Small"))
 Brush_Medium = Button(frame, text="Medium", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("Medium"))
 Brush_Large = Button(frame, text="Large", bg=BUTTON_COLOR, command=lambda: Change_Brush_Size("Large"))
@@ -388,14 +430,34 @@ Brush_fill = Button(frame, text="fill", bg=BUTTON_COLOR, command=lambda: Change_
 Export_button=Button(frame, text="Export", bg=BUTTON_COLOR, command=lambda: export())
 erase_button.image = img
 
-Brush_Small.place(relx=0.5, y=600,anchor="center")
-Brush_Medium.place(relx=0.5, y=650,anchor="center")
-Brush_Large.place(relx=0.5, y=700,anchor="center")
-Brush_fill.place(relx=0.5, y=550,anchor="center")
-Color_picker.place(relx=0.5, y=20,anchor="center")
-erase_button.place(relx=0.5, y=87,anchor="center")
-clear_button.place(relx=0.5, y=155,anchor="center")
-Export_button.place(relx=0.5, y=785,anchor="center")
+
+
+
+
+# Clear button
+clear_button.config(bg="#FF595E", fg="white", font=("Arial", 12, "bold"))
+clear_button.place(relx=0.8, y=200, anchor="center")  # moved up
+
+# Eraser button
+erase_button.config(bg="#FFD60A", borderwidth=1, highlightthickness=1)
+erase_button.place(relx=0.5, y=100, anchor="center")  # moved up
+
+# Color picker
+Color_picker.config(bg="#06D6A0", fg="white", font=("Arial", 11, "bold"))
+Color_picker.place(relx=0.5, y=30, anchor="center")  # moved up
+
+# Brush buttons
+Brush_fill.place(relx=0.5, y=580, anchor="center")
+Brush_Small.place(relx=0.2, y=660, anchor="center")
+Brush_Medium.place(relx=0.5, y=660, anchor="center")
+Brush_Large.place(relx=0.8, y=660, anchor="center")
+
+# Export button
+Export_button.config(bg="#118AB2", fg="white", font=("Arial", 12, "bold"))
+Export_button.place(relx=0.5, y=700, anchor="center")  # moved up
+
+
+
 
 
 
