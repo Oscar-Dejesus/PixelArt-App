@@ -4,15 +4,18 @@ from PIL import Image, ImageTk, ImageDraw
 import sys
 import os
 import math
-if sys.platform == "darwin":  
+if sys.platform == "darwin":
     from Cocoa import NSEvent, NSApplication, NSApp
     from tkmacosx import Button
-if getattr(sys, "frozen", False):
-    base_path = sys._MEIPASS
-else:
-    base_path = os.path.dirname(__file__)
+def resource_path(relative_path):
+    if getattr(sys, "frozen", False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
-image_path = os.path.join(base_path, "eraser.png")
+image_path = resource_path(os.path.join("assets", "eraser.png"))
+
 
 # VARIABLES
 window = Tk()
