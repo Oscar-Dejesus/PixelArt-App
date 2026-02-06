@@ -468,11 +468,9 @@ Color_picker.place(relx=0.5, y=30, anchor="center")  # moved up
 
 # Brush buttons
 Brush_fill.place(relx=0.5, y=580, anchor="center")
-frame.update_idletasks()  # make sure frame width is correct
-frame_width = frame.winfo_width()
-Brush_Small.place(x=frame_width*1//6, y=660, anchor="center")
-Brush_Medium.place(x=frame_width*3//6, y=660, anchor="center")
-Brush_Large.place(x=frame_width*5//6, y=660, anchor="center")
+Brush_Small.place(relx=0.2, y=660, anchor="center", width=80, height=40)
+Brush_Medium.place(relx=0.5, y=660, anchor="center", width=80, height=40)
+Brush_Large.place(relx=0.8, y=660, anchor="center", width=80, height=40)
 
 
 # Export button
