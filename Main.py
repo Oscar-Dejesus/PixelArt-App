@@ -120,23 +120,27 @@ def draw_lines():
 def Brush_Draw(x,y,left,h,w):
     global Brush_Size,offsetX, array_boxes,offsetY,rows,size,color
     max_height=rows*size + offsetY
-
-    if Brush_Size=="fill":
-        stack = [(left, h)]
-        Filled = set()
-        Filled.add((left, h))
-        all_cells = canvas.find_withtag("cell")
-        Fill_Color =None
-        Initial_area= canvas.find_overlapping(x, y, x, y)
-        # Create an empty set to store positions
-        cell_coords_set = {}
-
-        # Loop through each item and add its (x, y) position to the set
-        for item in all_cells:
+    cell_coords_set = {}
+    all_cells = canvas.find_withtag("cell")
+    Initial_area= canvas.find_overlapping(x, y, x, y)
+    # Loop through each item and add its (x, y) position to the set
+    for item in all_cells:
             coords = canvas.coords(item)      # returns [x1, y1, x2, y2]
             x = math.floor(coords[0])
             y = math.floor(coords[1])
             cell_coords_set[(x, y)] = item
+    
+    if Brush_Size=="fill":
+        stack = [(left, h)]
+        Filled = set()
+        Filled.add((left, h))
+        
+        Fill_Color =None
+        
+        # Create an empty set to store positions
+        
+
+        
         
 
         for item in Initial_area:
@@ -316,9 +320,13 @@ def changecolor(color_name):
 def zoom_out():
     global size, array_boxes,Scale_Factor,offsetY
     Scale = 0.97
-    Scale_Factor *= Scale
+    next_scale = Scale_Factor * Scale
+    if next_scale <.3:  # check *next* scale, not current
+        return
+    Scale_Factor*= Scale
     cy = canvas.winfo_height() / 2  
     cx = canvas.winfo_width() / 2  
+    
     for i, x in enumerate(array_boxes):
         array_boxes[i] = cx + (array_boxes[i] - cx) * Scale
     
@@ -331,6 +339,12 @@ def zoom_out():
 def zoom_in():
     global size, array_boxes,Scale_Factor,offsetY
     Scale = 1.03
+    
+    
+    next_scale = Scale_Factor * Scale
+    if next_scale >2:  # check *next* scale, not current
+        return
+    
     Scale_Factor *= Scale
     cx = canvas.winfo_width() / 2  
     cy = canvas.winfo_height() / 2  
